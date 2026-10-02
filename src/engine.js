@@ -107,7 +107,6 @@ export class ShowEngine {
         vx, vy, age: 0, life: recipe.life * (.78 + random() * .36), drag: recipe.drag,
         gravity: recipe.gravity, color, size: .7 + random() * 1.8, twinkle: random() * 10,
         flickerRate: event.type === "glitter" ? 46 : 22, z: (random() - .5) * 1.4, vz: (random() - .5) * .22 };
-        flickerRate: event.type === "glitter" ? 46 : 22 };
       if (age) this.advance(particle, age);
       if (particle.age < particle.life) this.particles.push(particle);
     }
@@ -122,7 +121,6 @@ export class ShowEngine {
     const steps = Math.ceil(dt / .03), step = dt / steps;
     const wind = { clear: 1.5, mist: .5, cloudy: 4, rain: 7 }[this.show?.atmosphere] || 0;
     for (let i = 0; i < steps; i++) { p.px = p.x; p.py = p.y; p.vx = p.vx * p.drag ** (step * 60) + wind * step; p.vy = p.vy * p.drag ** (step * 60) + p.gravity * step; p.x += p.vx * step; p.y += p.vy * step; p.z += p.vz * step; p.age += step; }
-    for (let i = 0; i < steps; i++) { p.px = p.x; p.py = p.y; p.vx = p.vx * p.drag ** (step * 60) + wind * step; p.vy = p.vy * p.drag ** (step * 60) + p.gravity * step; p.x += p.vx * step; p.y += p.vy * step; p.age += step; }
   }
 
   update(dt) {
