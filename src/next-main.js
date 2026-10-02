@@ -13,7 +13,7 @@ const status = $('#gpuStatus');
 let engine;
 try {
   engine = new GPUPyroEngine(canvas);
-  status.textContent = 'GPU COMPUTE · 512²';
+  status.textContent = `GPU COMPUTE · ${engine.computeSize}² · ${engine.qualityProfile.toUpperCase()}`;
   status.classList.add('ok');
 } catch (error) {
   console.error(error);
@@ -86,13 +86,16 @@ function hookUI(){
   $$('.camera-button').forEach(b=>b.onclick=()=>{$$('.camera-button').forEach(x=>x.classList.remove('active'));b.classList.add('active');engine.setCameraMode(b.dataset.camera);});
   const controls={wind:'wind',bloom:'bloom',smoke:'smoke',reflection:'reflection',exposure:'exposure',trail:'trail'};
   for(const [id,key] of Object.entries(controls)){$('#'+id).addEventListener('input',e=>{engine.setConfig({[key]:+e.target.value});$('#'+id+'Out').textContent=(+e.target.value).toFixed(2);});}
-  $('#quality').onchange=e=>{const v=e.target.value;if(v==='cinema'){engine.renderer.setPixelRatio(Math.min(devicePixelRatio,2));engine.bloomPass.radius=.72;}else if(v==='balanced'){engine.renderer.setPixelRatio(Math.min(devicePixelRatio,1.35));engine.bloomPass.radius=.62;}else{engine.renderer.setPixelRatio(1);engine.bloomPass.radius=.48;}engine.resize();};
+  $('#quality').value=engine.qualityProfile;
+  $('#quality').onchange=e=>{const profile=engine.setQuality(e.target.value);status.textContent=`GPU COMPUTE · ${engine.computeSize}² · ${profile.toUpperCase()}`;};
 
   canvas.addEventListener('pointerdown',e=>{draggingView=true;moved=0;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId);});
   canvas.addEventListener('pointermove',e=>{if(!draggingView)return;const dx=e.clientX-lx,dy=e.clientY-ly;moved+=Math.abs(dx)+Math.abs(dy);engine.orbit(dx,dy);lx=e.clientX;ly=e.clientY;});
   canvas.addEventListener('pointerup',async e=>{if(draggingView&&moved<7){await engine.enableAudio();const rect=canvas.getBoundingClientRect(),nx=(e.clientX-rect.left)/rect.width*2-1;engine.launch(selectedType,{x:nx*420,height:rr(145,225),intensity:1.05,palette:selectedPalette});}draggingView=false;});
   canvas.addEventListener('wheel',e=>{engine.zoom(e.deltaY);e.preventDefault();},{passive:false});
   addEventListener('resize',()=>engine.resize());
+  canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();setPlaying(false);status.textContent='GPU CONTEXT LOST';status.classList.remove('ok');status.classList.add('bad');$('#entryError').textContent='O contexto WebGL foi perdido. A simulação foi pausada para proteger o estado.';});
+  canvas.addEventListener('webglcontextrestored',()=>location.reload());
 }
 
 function updateMetrics(){const m=engine.metrics;$('#fps').textContent=m.fps;$('#particleCount').textContent=m.particles.toLocaleString('pt-BR');$('#cameraMode').textContent=engine.cameraMode.toUpperCase();}
