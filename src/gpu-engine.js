@@ -10,6 +10,13 @@ const TAU = Math.PI * 2;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const rr = (a, b) => a + Math.random() * (b - a);
+const detectQualityProfile = () => {
+  const memory = Number(navigator.deviceMemory || 0);
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  if ((memory && memory <= 2) || (coarse && memory && memory <= 4)) return 'performance';
+  if ((memory && memory <= 4) || coarse) return 'balanced';
+  return 'cinema';
+};
 
 const TYPE = Object.freeze({
   peony: 0,
@@ -637,7 +644,9 @@ export class GPUPyroEngine {
     this.canvas=canvas;
     this.config={gravity:12.8,wind:0.9,bloom:1.15,exposure:1.0,reflection:.62,smoke:1.0,trail:1.0,volume:.85,...options};
     this.renderer=new THREE.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance',stencil:false});
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    this.qualityProfile=options.quality && options.quality !== 'auto' ? options.quality : detectQualityProfile();
+    const initialDprCap=this.qualityProfile==='cinema'?2:this.qualityProfile==='balanced'?1.35:1;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,initialDprCap));
     this.renderer.outputColorSpace=THREE.SRGBColorSpace;
     this.renderer.toneMapping=THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure=.92;
@@ -648,7 +657,7 @@ export class GPUPyroEngine {
     this.cameraMode='ground';
     this.cameraYaw=0;this.cameraPitch=.19;this.cameraZoom=1;
     this.mirrorCamera=this.camera.clone();
-    this.time=0;this.spawnHead=0;this.rockets=[];this.flashes=[];this.glow=new THREE.Color();this.autoExposure=.92;this.metrics={particles:0,fps:60,gpu:true};this._fpsClock=0;this._fpsFrames=0;
+    this.time=0;this.spawnHead=0;this.rockets=[];this.flashes=[];this.liveSpawns=[];this.finaleTimers=new Set();this.glow=new THREE.Color();this.autoExposure=.92;this.metrics={particles:0,fps:60,gpu:true};this._fpsClock=0;this._fpsFrames=0;this.reflectionScale=this.qualityProfile==='cinema'?.52:this.qualityProfile==='balanced'?.38:.28;
     this.audio=new PyroAudio();
     this.#initEnvironment();
     this.#initCompute();
@@ -681,7 +690,11 @@ export class GPUPyroEngine {
   }
 
   #initCompute(){
-    this.computeSize=512;this.capacity=this.computeSize*this.computeSize;
+    if(!this.renderer.capabilities.isWebGL2)throw new Error('WebGL2 is required by the GPGPU renderer.');
+    if(!this.renderer.extensions.get('EXT_color_buffer_float'))throw new Error('EXT_color_buffer_float is required for HDR GPGPU render targets.');
+    const maxTexture=this.renderer.capabilities.maxTextureSize||512;
+    const profileSize=this.qualityProfile==='cinema'?512:this.qualityProfile==='balanced'?384:256;
+    this.computeSize=Math.max(256,Math.min(profileSize,Math.floor(maxTexture/64)*64));this.capacity=this.computeSize*this.computeSize;
     this.gpuCompute=new GPUComputationRenderer(this.computeSize,this.computeSize,this.renderer);
     this.gpuCompute.setDataType(THREE.HalfFloatType);
     const posTex=this.gpuCompute.createTexture(),velTex=this.gpuCompute.createTexture();
@@ -728,11 +741,24 @@ export class GPUPyroEngine {
 
   #initPost(){
     const rt=new THREE.WebGLRenderTarget(1,1,{type:THREE.HalfFloatType,format:THREE.RGBAFormat,depthBuffer:true,stencilBuffer:false});
-    this.composer=new EffectComposer(this.renderer,rt);this.renderPass=new RenderPass(this.scene,this.camera);this.bloomPass=new UnrealBloomPass(new THREE.Vector2(1,1),this.config.bloom,.72,.78);this.filmPass=new ShaderPass(filmShader);this.outputPass=new OutputPass();this.composer.addPass(this.renderPass);this.composer.addPass(this.bloomPass);this.composer.addPass(this.filmPass);this.composer.addPass(this.outputPass);
+    const bloomRadius=this.qualityProfile==='cinema'?.72:this.qualityProfile==='balanced'?.60:.46;
+    this.composer=new EffectComposer(this.renderer,rt);this.renderPass=new RenderPass(this.scene,this.camera);this.bloomPass=new UnrealBloomPass(new THREE.Vector2(1,1),this.config.bloom,bloomRadius,.78);this.filmPass=new ShaderPass(filmShader);this.outputPass=new OutputPass();this.composer.addPass(this.renderPass);this.composer.addPass(this.bloomPass);this.composer.addPass(this.filmPass);this.composer.addPass(this.outputPass);
   }
 
   resize(){
-    const w=Math.max(1,this.canvas.clientWidth||window.innerWidth),h=Math.max(1,this.canvas.clientHeight||window.innerHeight);this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.composer.setSize(w,h);this.bloomPass.setSize(w,h);const scale=.52*this.renderer.getPixelRatio();this.reflectionTarget.setSize(Math.max(320,Math.floor(w*scale)),Math.max(180,Math.floor(h*scale)));this.particleMaterial.uniforms.uPointScale.value=h*this.renderer.getPixelRatio()/(2*Math.tan(this.camera.fov*Math.PI/360));
+    const w=Math.max(1,this.canvas.clientWidth||window.innerWidth),h=Math.max(1,this.canvas.clientHeight||window.innerHeight);this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();this.composer.setSize(w,h);this.bloomPass.setSize(w,h);const scale=this.reflectionScale*this.renderer.getPixelRatio();this.reflectionTarget.setSize(Math.max(256,Math.floor(w*scale)),Math.max(144,Math.floor(h*scale)));this.particleMaterial.uniforms.uPointScale.value=h*this.renderer.getPixelRatio()/(2*Math.tan(this.camera.fov*Math.PI/360));
+  }
+
+  setQuality(profile='auto'){
+    const resolved=profile==='auto'?detectQualityProfile():profile;
+    if(!['cinema','balanced','performance'].includes(resolved))return this.qualityProfile;
+    this.qualityProfile=resolved;
+    const dprCap=resolved==='cinema'?2:resolved==='balanced'?1.35:1;
+    this.reflectionScale=resolved==='cinema'?.52:resolved==='balanced'?.38:.28;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,dprCap));
+    if(this.bloomPass)this.bloomPass.radius=resolved==='cinema'?.72:resolved==='balanced'?.60:.46;
+    if(this.composer)this.resize();
+    return this.qualityProfile;
   }
 
   setCameraMode(mode){if(['ground','drone','director'].includes(mode))this.cameraMode=mode;}
@@ -756,7 +782,8 @@ export class GPUPyroEngine {
   #spawnParticles(count,params){
     count=Math.min(this.capacity,Math.max(1,Math.floor(count)));let remaining=count;
     while(remaining>0){const chunk=Math.min(remaining,this.capacity-this.spawnHead);this.#applySpawn(this.spawnHead,chunk,params);this.spawnHead=(this.spawnHead+chunk)%this.capacity;remaining-=chunk;}
-    this.metrics.particles=Math.min(this.capacity,this.metrics.particles+count);
+    this.liveSpawns.push({count,expires:this.time+(params.life||0)});
+    if(this.liveSpawns.length>256)this.liveSpawns.splice(0,this.liveSpawns.length-256);
   }
 
   burst(origin,type='peony',options={}){
@@ -772,14 +799,20 @@ export class GPUPyroEngine {
   }
 
   finale(){
+    this.cancelFinale();
     const waves=[
       ['cometa',0,9],['peony',900,12],['anel',1900,7],['pistilo',2800,10],['willow',3900,8],['strobo',5200,12],['reveillon',6400,16],['kamuro',8000,12],['duplo',9800,16],['reveillon',11600,22]
     ];
-    for(const [type,delay,count] of waves)for(let i=0;i<count;i++)setTimeout(()=>this.launch(type,{x:lerp(-430,430,(i+.5)/count)+rr(-22,22),height:rr(120,245),intensity:delay>9000?1.5:1}),delay+i*rr(45,120));
+    for(const [type,delay,count] of waves)for(let i=0;i<count;i++){
+      const timer=setTimeout(()=>{this.finaleTimers.delete(timer);this.launch(type,{x:lerp(-430,430,(i+.5)/count)+rr(-22,22),height:rr(120,245),intensity:delay>9000?1.5:1});},delay+i*rr(45,120));
+      this.finaleTimers.add(timer);
+    }
   }
 
+  cancelFinale(){for(const timer of this.finaleTimers)clearTimeout(timer);this.finaleTimers.clear();}
+
   reset(){
-    this.gpuCompute.renderTexture(this.initialPosition,this.gpuCompute.getCurrentRenderTarget(this.positionVariable));this.gpuCompute.renderTexture(this.initialPosition,this.gpuCompute.getAlternateRenderTarget(this.positionVariable));this.gpuCompute.renderTexture(this.initialVelocity,this.gpuCompute.getCurrentRenderTarget(this.velocityVariable));this.gpuCompute.renderTexture(this.initialVelocity,this.gpuCompute.getAlternateRenderTarget(this.velocityVariable));this.spawnHead=0;this.rockets.length=0;this.flashes.length=0;this.smoke.reset();this.metrics.particles=0;
+    this.cancelFinale();this.gpuCompute.renderTexture(this.initialPosition,this.gpuCompute.getCurrentRenderTarget(this.positionVariable));this.gpuCompute.renderTexture(this.initialPosition,this.gpuCompute.getAlternateRenderTarget(this.positionVariable));this.gpuCompute.renderTexture(this.initialVelocity,this.gpuCompute.getCurrentRenderTarget(this.velocityVariable));this.gpuCompute.renderTexture(this.initialVelocity,this.gpuCompute.getAlternateRenderTarget(this.velocityVariable));this.spawnHead=0;this.rockets.length=0;this.flashes.length=0;this.liveSpawns.length=0;this.smoke.reset();this.metrics.particles=0;
   }
 
   #updateRockets(dt){
@@ -808,6 +841,7 @@ export class GPUPyroEngine {
     const wind=new THREE.Vector3((Math.sin(this.time*.071)*.6+.75)*this.config.wind,0,Math.cos(this.time*.053)*.18*this.config.wind);
     const pU=this.positionVariable.material.uniforms,vU=this.velocityVariable.material.uniforms;pU.uDelta.value=vU.uDelta.value=dt;vU.uTime.value=this.time;vU.uGravity.value=this.config.gravity;vU.uWind.value.copy(wind);pU.uSpawnCount.value=vU.uSpawnCount.value=0;this.gpuCompute.compute();
     const tex=this.#stateTextures();this.particleMaterial.uniforms.uPosition.value=tex.position;this.particleMaterial.uniforms.uVelocity.value=tex.velocity;this.particleMaterial.uniforms.uTime.value=this.time;this.trailMaterial.uniforms.uPosition.value=tex.position;this.trailMaterial.uniforms.uVelocity.value=tex.velocity;
+    this.liveSpawns=this.liveSpawns.filter(s=>s.expires>this.time);this.metrics.particles=Math.min(this.capacity,this.liveSpawns.reduce((sum,s)=>sum+s.count,0));
 
     let energy=0;for(let i=this.flashes.length-1;i>=0;i--){const f=this.flashes[i];f.age+=dt;f.power*=Math.exp(-dt*4.6);energy+=f.power;if(f.age>f.life||f.power<.02)this.flashes.splice(i,1);}const top=this.flashes.slice(0,4);this.smoke.setFlashes(top);this.smoke.update(dt,this.time,wind);
     this.glow.setRGB(0,0,0);for(const f of top)this.glow.add(f.color.clone().multiplyScalar(Math.min(.35,f.power*.065)));this.skyMaterial.uniforms.uGlow.value.copy(this.glow);this.skyMaterial.uniforms.uTime.value=this.time;this.waterMaterial.uniforms.uGlow.value.copy(this.glow);this.waterMaterial.uniforms.uTime.value=this.time;
