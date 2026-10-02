@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#050711"><title>PyroWorks — Noite no Lago</title>
+  <meta name="description" content="Crie e dirija espetáculos audiovisuais virtuais em uma timeline cinematográfica.">
+  <meta property="og:title" content="PyroWorks — Noite no Lago"><meta property="og:description" content="Dirija um espetáculo virtual de luz, ritmo e atmosfera."><meta property="og:type" content="website">
+  <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="PyroWorks início"><span class="brand-mark">✦</span><span>PYRO<span>WORKS</span></span></a>
+    <div class="project"><button class="icon-button" aria-label="Voltar">‹</button><div><strong id="projectName">Noite no Lago</strong><small id="saveStatus">Salvo neste dispositivo</small></div></div>
+    <div class="top-actions"><div class="mode-switch"><button class="active" data-mode="beginner">BEGINNER</button><button data-mode="pro">PRO</button></div><button id="importButton" class="quiet-button">↑ Importar</button><button id="shareButton" class="quiet-button">↓ Exportar</button><button id="spectatorButton" class="primary-small">Modo espectador</button><button class="avatar">LS</button></div>
+  </header>
+
+  <main class="workspace">
+    <aside class="sidebar">
+      <div class="sidebar-title"><div><span class="eyebrow">BIBLIOTECA</span><h2>Formas de luz</h2></div><button class="icon-button">⌕</button></div>
+      <p class="hint">Arraste uma forma para a timeline ou selecione para visualizar.</p>
+      <div id="recipeList" class="recipe-list"></div>
+      <div class="divider"></div>
+      <span class="eyebrow">PALETA DO SHOW</span>
+      <div id="paletteList" class="palette-list"></div>
+      <label class="audience-picker"><span class="eyebrow">PÚBLICO</span><select id="audienceSelect"><option value="cinematic">Cinematográfico</option><option value="artistic">Artístico</option><option value="festival">Festival</option><option value="family">Família</option></select></label>
+      <div class="director-card"><div class="director-icon">✦</div><div><strong>Diretor criativo</strong><p id="directorText">Descreva uma intenção e transforme a composição.</p></div><button id="directorButton" aria-label="Abrir diretor criativo">→</button></div>
+    </aside>
+
+    <section class="stage-panel">
+      <canvas id="stage" aria-label="Prévia do espetáculo Noite no Lago"></canvas>
+      <div class="stage-overlay">
+        <div class="location"><span class="live-dot"></span><div><small>PALCO 01</small><strong>Lago de Astra · Noite clara</strong></div></div>
+        <div class="view-actions"><button id="cameraButton" title="Alternar câmera">◉</button><button id="hudButton" title="Ocultar controles">◫</button><button title="Tela cheia" id="fullscreenButton">⌗</button></div>
+      </div>
+      <button id="atmosphereButton" class="atmosphere"><span>≈</span><div><small>ATMOSFERA</small><strong id="atmosphereName">Céu claro · brisa leve</strong></div></button>
+      <div id="telemetry" class="telemetry pro-only"><span>60 FPS</span><span>0 PARTÍCULAS</span><span>CÂMERA TERRESTRE</span></div>
+      <div id="heroMessage" class="hero-message"><span>APERTE PLAY</span><strong>Veja a noite ganhar vida</strong><small>Uma composição de 60 segundos</small></div>
+      <div class="stage-vignette"></div>
+    </section>
+
+    <aside class="inspector">
+      <div class="inspector-heading"><span class="eyebrow">INSPETOR</span><button class="icon-button">•••</button></div>
+      <div id="emptyInspector" class="empty-inspector"><span>✦</span><strong>Selecione um evento</strong><p>Escolha um bloco na timeline para ajustar sua intenção.</p></div>
+      <div id="eventInspector" hidden>
+        <div class="selected-title"><span id="selectedIcon">✦</span><div><small>FORMA DE LUZ</small><strong id="selectedName">Peônia</strong></div></div>
+        <label>Intensidade <output id="intensityOutput">75%</output><input id="intensity" type="range" min="20" max="100" value="75"></label>
+        <label>Posição horizontal <output id="positionOutput">50%</output><input id="position" type="range" min="10" max="90" value="50"></label>
+        <label class="pro-control">Altura visual <output id="heightOutput">35%</output><input id="height" type="range" min="10" max="65" value="35"></label>
+        <div class="two-buttons"><button id="duplicateButton">⧉ Duplicar</button><button id="deleteButton" class="danger">⌫ Remover</button></div><button id="sequenceButton" class="sequence-button pro-control">⤳ Criar sequência crescente</button>
+      </div>
+      <div class="show-arc"><div class="score-line"><span><small>RHYTHM SCORE</small><b id="rhythmScore">88</b></span><p id="scoreNote">Arco forte · pausa expressiva</p></div><div class="arc-title"><span class="eyebrow">ARCO DO SHOW</span><strong>Finale em <span id="finaleCountdown">00:56</span></strong></div><div class="energy-bars" aria-label="Curva de energia"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="arc-labels"><span>Introdução</span><span>Respiro</span><span>Finale</span></div></div>
+    </aside>
+
+    <section class="timeline-panel">
+      <div class="transport">
+        <div class="transport-left"><button id="undoButton" title="Desfazer">↶</button><button id="resetButton" title="Restaurar show">↺</button><span></span><button id="loopButton" title="Repetir">↻</button></div>
+        <div class="transport-center"><button id="backButton">│◀</button><button id="playButton" class="play" aria-label="Reproduzir">▶</button><button id="forwardButton">▶│</button><div class="time"><strong id="timeDisplay">00:00.0</strong><small>/ 01:00.0</small></div></div>
+        <div class="transport-right"><button id="zoomOut">−</button><div class="zoom-track"><i></i></div><button id="zoomIn">＋</button></div>
+      </div>
+      <div class="timeline-wrap">
+        <div class="track-labels"><div class="ruler-label">TEMPO</div><div><span class="track-icon visual">✦</span><p><strong>Formas de luz</strong><small>25 eventos</small></p><button id="effectsMute" title="Silenciar efeitos" aria-pressed="false">●</button></div><div><span class="track-icon music">♫</span><p><strong>Orquestra Astra</strong><small>Trilha procedural</small></p><button id="musicMute" title="Silenciar música" aria-pressed="false">●</button></div></div>
+        <div id="timelineScroll" class="timeline-scroll"><div id="timeline" class="timeline">
+          <div id="ruler" class="ruler"></div><div class="section-labels"><span>INTRODUÇÃO</span><span>TEMA</span><span>DESENVOLVIMENTO</span><span>RESPIRO</span><span>ESCALADA</span><span>FINALE</span></div>
+          <div id="eventTrack" class="event-track"></div>
+          <div class="music-track"><div class="waveform" id="waveform"></div><span>♪ ORQUESTRA ASTRA — HORIZONTE</span></div>
+          <div id="playhead" class="playhead"><i></i></div>
+        </div></div>
+      </div>
+    </section>
+  </main>
+  <div id="toast" role="status"></div>
+  <input id="importInput" type="file" accept="application/json" hidden>
+  <dialog id="directorDialog" class="director-dialog">
+    <form method="dialog"><button class="dialog-close" value="cancel" aria-label="Fechar">×</button><span class="eyebrow">DIRETOR CRIATIVO</span><h2>Qual é a intenção?</h2><p>Descreva ritmo, cor, atmosfera ou finale. Todas as alterações podem ser desfeitas.</p><textarea id="directorPrompt" rows="4" placeholder="Ex.: Quero uma abertura lenta, uma pausa e um finale azul e dourado."></textarea><div class="prompt-chips"><button type="button">Abertura minimalista</button><button type="button">Pausa antes do finale</button><button type="button">Finale gigantesco</button><button type="button">Névoa e Cyberpunk</button></div><div class="dialog-actions"><button id="proceduralButton" type="button">✦ Surpreenda-me</button><button id="applyDirectionButton" type="button" class="primary-small">Aplicar direção</button></div><div id="directionResult" class="direction-result"></div></form>
+  </dialog>
+  <dialog id="resultsDialog" class="results-dialog">
+    <div class="result-hero"><span>PERFORMANCE CONCLUÍDA</span><strong id="audienceScore">88</strong><small>APROVAÇÃO DO PÚBLICO</small></div><div class="result-body"><h2 id="resultTitle">Uma noite memorável</h2><p id="resultAudience">Avaliação do público cinematográfico</p><div class="score-grid"><div><span>Timing</span><b id="resultTiming">90</b></div><div><span>Cores</span><b id="resultColor">86</b></div><div><span>Finale</span><b id="resultFinale">92</b></div><div><span>Respiro</span><b id="resultRestraint">81</b></div></div><blockquote id="resultHighlight">“O finale resolveu o arco com confiança.”</blockquote><div class="result-actions"><button id="editResultButton">Voltar e editar</button><button id="replayResultButton" class="primary-small">▶ Assistir novamente</button></div></div>
+  </dialog>
+  <script type="module" src="src/app.js"></script>
+</body></html>
