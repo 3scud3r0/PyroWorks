@@ -9,7 +9,7 @@ const app = readFileSync(new URL('../src/next-main.js', import.meta.url), 'utf8'
 test('uses current modular Three.js and GPUComputationRenderer', () => {
   assert.match(html, /three@0\.186\.1\/build\/three\.module\.js/);
   assert.match(engine, /GPUComputationRenderer/);
-  assert.match(engine, /computeSize=512/);
+  assert.match(engine, /profileSize=this\.qualityProfile==='cinema'\?512:this\.qualityProfile==='balanced'\?384:256/);
   assert.match(engine, /capacity=this\.computeSize\*this\.computeSize/);
 });
 
@@ -59,4 +59,29 @@ test('distance delayed audio is preserved', () => {
   assert.match(engine, /d\/343/);
   assert.match(engine, /createStereoPanner/);
   assert.match(engine, /createConvolver/);
+});
+
+
+test('runtime quality degrades without leaving the GPU renderer', () => {
+  assert.match(engine, /setQuality\(profile='auto'\)/);
+  assert.match(engine, /reflectionScale=resolved==='cinema'/);
+  assert.match(app, /engine\.setQuality/);
+});
+
+test('finale timers are cancellable and reset cannot leak delayed launches', () => {
+  assert.match(engine, /finaleTimers=new Set/);
+  assert.match(engine, /cancelFinale\(\)/);
+  assert.match(engine, /clearTimeout\(timer\)/);
+  assert.match(engine, /this\.cancelFinale\(\);this\.gpuCompute/);
+});
+
+test('particle metric estimates currently-live GPU allocations instead of cumulative spawns', () => {
+  assert.match(engine, /liveSpawns\.push/);
+  assert.match(engine, /expires>this\.time/);
+  assert.match(engine, /reduce\(\(sum,s\)=>sum\+s\.count,0\)/);
+});
+
+test('WebGL context loss pauses the show and recovers with a clean reload', () => {
+  assert.match(app, /webglcontextlost/);
+  assert.match(app, /webglcontextrestored/);
 });
