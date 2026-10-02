@@ -20,6 +20,10 @@ espectador, geração procedural, Rhythm Score, importação/exportação de
 performances, um Diretor Criativo por linguagem natural e uma simulação
 determinística em Canvas com trilha e efeitos sonoros procedurais.
 
+Ao abrir, o protótipo entra diretamente na **experiência cinematográfica em tela
+cheia**: cenário, som e um único botão para iniciar. O estúdio técnico permanece
+oculto e só aparece quando o jogador escolhe **Abrir Estúdio**.
+
 ### Recursos jogáveis
 
 - Edite timing, intensidade, posição e altura das formas de luz.

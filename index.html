@@ -8,6 +8,10 @@
   <link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
 </head>
+<body class="cinematic-home">
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="PyroWorks início"><span class="brand-mark">✦</span><span>PYRO<span>WORKS</span></span></a>
+    <div class="project"><button id="backToShow" class="icon-button" aria-label="Voltar ao espetáculo">‹</button><div><strong id="projectName">Noite no Lago</strong><small id="saveStatus">Salvo neste dispositivo</small></div></div>
 <body>
   <header class="topbar">
     <a class="brand" href="#" aria-label="PyroWorks início"><span class="brand-mark">✦</span><span>PYRO<span>WORKS</span></span></a>
@@ -37,6 +41,11 @@
       <div id="telemetry" class="telemetry pro-only"><span>60 FPS</span><span>0 PARTÍCULAS</span><span>CÂMERA TERRESTRE</span></div>
       <div id="heroMessage" class="hero-message"><span>APERTE PLAY</span><strong>Veja a noite ganhar vida</strong><small>Uma composição de 60 segundos</small></div>
       <div class="stage-vignette"></div>
+      <div class="cinematic-ui">
+        <div class="cinematic-brand"><span>✦</span><div><b>PYROWORKS</b><small>UMA EXPERIÊNCIA AUDIOVISUAL</small></div></div>
+        <div class="cinematic-center"><p>NOITE NO LAGO</p><h1>O céu é o seu palco.</h1><span>Luz, música e atmosfera em uma performance cinematográfica.</span><button id="cinematicPlay" aria-label="Iniciar espetáculo"><i>▶</i><b>INICIAR EXPERIÊNCIA</b></button></div>
+        <div class="cinematic-bottom"><button id="openStudioButton">☷ &nbsp; ABRIR ESTÚDIO</button><div class="cinematic-progress"><i id="cinematicProgress"></i></div><div><button id="cinematicCamera" title="Alternar câmera">◉</button><button id="cinematicSound" title="Ativar ou silenciar som">♪</button><button id="cinematicFullscreen" title="Tela cheia">⛶</button></div></div>
+      </div>
     </section>
 
     <aside class="inspector">
