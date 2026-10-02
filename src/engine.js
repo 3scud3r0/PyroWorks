@@ -107,6 +107,7 @@ export class ShowEngine {
         vx, vy, age: 0, life: recipe.life * (.78 + random() * .36), drag: recipe.drag,
         gravity: recipe.gravity, color, size: .7 + random() * 1.8, twinkle: random() * 10,
         flickerRate: event.type === "glitter" ? 46 : 22, z: (random() - .5) * 1.4, vz: (random() - .5) * .22 };
+        flickerRate: event.type === "glitter" ? 46 : 22 };
       if (age) this.advance(particle, age);
       if (particle.age < particle.life) this.particles.push(particle);
     }
@@ -121,6 +122,7 @@ export class ShowEngine {
     const steps = Math.ceil(dt / .03), step = dt / steps;
     const wind = { clear: 1.5, mist: .5, cloudy: 4, rain: 7 }[this.show?.atmosphere] || 0;
     for (let i = 0; i < steps; i++) { p.px = p.x; p.py = p.y; p.vx = p.vx * p.drag ** (step * 60) + wind * step; p.vy = p.vy * p.drag ** (step * 60) + p.gravity * step; p.x += p.vx * step; p.y += p.vy * step; p.z += p.vz * step; p.age += step; }
+    for (let i = 0; i < steps; i++) { p.px = p.x; p.py = p.y; p.vx = p.vx * p.drag ** (step * 60) + wind * step; p.vy = p.vy * p.drag ** (step * 60) + p.gravity * step; p.x += p.vx * step; p.y += p.vy * step; p.age += step; }
   }
 
   update(dt) {
@@ -183,6 +185,7 @@ export class ShowEngine {
     ctx.globalCompositeOperation = "lighter";
     this.flashes.forEach(f => { const a = 1-f.age/f.life, g=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,100*f.power); g.addColorStop(0,`rgba(${f.color.join()},${a*.5})`);g.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=g;ctx.fillRect(f.x-120,f.y-120,240,240); });
     this.particles.forEach(p => { const fade=Math.max(0,1-p.age/p.life),depth=1/(1+p.z*.16),sx=w/2+(p.x-w/2)*depth,sy=h/2+(p.y-h/2)*depth,spx=w/2+(p.px-w/2)*depth,spy=h/2+(p.py-h/2)*depth; const flicker=.55+.45*Math.sin((p.age*p.flickerRate+p.twinkle)); const alpha=fade*flicker; ctx.strokeStyle=`rgba(${p.color.join()},${alpha*.72})`;ctx.lineWidth=p.size*fade*depth;ctx.beginPath();ctx.moveTo(spx,spy);ctx.lineTo(sx,sy);ctx.stroke();ctx.shadowColor=`rgb(${p.color.join()})`;ctx.shadowBlur=5*fade;ctx.fillStyle=`rgba(255,255,235,${alpha})`;ctx.fillRect(sx-.7*depth,sy-.7*depth,1.4*depth,1.4*depth);ctx.shadowBlur=0; });
+    this.particles.forEach(p => { const fade=Math.max(0,1-p.age/p.life); const flicker=.55+.45*Math.sin((p.age*p.flickerRate+p.twinkle)); const alpha=fade*flicker; ctx.strokeStyle=`rgba(${p.color.join()},${alpha*.75})`;ctx.lineWidth=p.size*fade;ctx.beginPath();ctx.moveTo(p.px,p.py);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.fillStyle=`rgba(255,255,235,${alpha})`;ctx.fillRect(p.x-0.65,p.y-0.65,1.3,1.3); });
     // Reflections are deliberately blurred vertical impressions, not duplicate particles.
     ctx.globalAlpha=.18; this.particles.filter((_,i)=>i%4===0).forEach(p=>{const y=h*.67+(h*.67-p.y)*.22;ctx.strokeStyle=`rgb(${p.color.join()})`;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(p.x-4,y);ctx.lineTo(p.x+4,y);ctx.stroke();});
     ctx.globalCompositeOperation="screen";this.ripples.forEach(r=>{const a=Math.max(0,1-r.age/r.life)*.18;ctx.strokeStyle=`rgba(${r.color.join()},${a})`;ctx.beginPath();ctx.ellipse(r.x,h*.71,18+r.age*44,2+r.age*3,0,0,Math.PI*2);ctx.stroke();});ctx.restore();
